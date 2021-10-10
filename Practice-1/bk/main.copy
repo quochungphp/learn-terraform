@@ -1,0 +1,176 @@
+terraform {
+  required_version = ">= 0.12"
+}
+
+# Specify the provider and access details
+provider "aws" {
+  region = var.aws_region
+  access_key = var.access_key
+  secret_key = var.secret_key
+}
+
+
+# 1. Create VPC
+resource "aws_vpc" "dev" {
+ cidr_block = "10.0.0.0/16"
+ enable_dns_hostnames = true
+ tags = {
+   Name = "Dev"
+ }
+}
+
+# 2. Create gateway
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.dev.id
+
+}
+# 3. Create custom route tabe
+resource "aws_route_table" "dev-route-table" {
+  vpc_id = aws_vpc.dev.id
+
+  route  {
+      cidr_block = var.ip_all_traffic
+      gateway_id = aws_internet_gateway.gw.id # all traffic from subnet get out to the internet
+    }
+
+  route  {
+      ipv6_cidr_block        = "::/0"
+      gateway_id = aws_internet_gateway.gw.id # all traffic from subnet get out to the internet
+    }
+
+  tags = {
+    Name = "Dev"
+  }
+}
+
+# 4. Create subnet
+resource "aws_subnet" "dev" {
+  vpc_id     = aws_vpc.dev.id
+  cidr_block = var.cidr_block
+  availability_zone = var.availability_zone
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "Dev"
+  }
+}
+
+# 5. Accociate subnet with route table
+resource "aws_route_table_association" "a" {
+  subnet_id      = aws_subnet.dev.id
+  route_table_id = aws_route_table.dev-route-table.id
+}
+
+# 6. Create Security Group to allow port 22,80,443
+resource "aws_security_group" "allow_inbound_outbound_http" {
+  name        = "allow-inbound-http"
+  description = "Allow inbound HTTP traffic"
+  vpc_id      = aws_vpc.dev.id
+  // inbound
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.ip_all_traffic] # Allow all IPs connect
+  }
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.ip_all_traffic]
+  }
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ip_all_traffic]
+  }
+
+  // outbound
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.ip_all_traffic]
+  }
+
+  tags = {
+    Name = "Allow Web"
+  }
+}
+
+# 7. Create a network interface with an ip in the subnet that was created in step 4
+
+resource "aws_network_interface" "web-server-nic" {
+  subnet_id       = aws_subnet.dev.id
+  private_ips     = ["10.0.1.50"]
+  security_groups = [aws_security_group.allow_inbound_outbound_http.id]
+}
+
+# 8. Assign an elastic IP to the network interface created in step 7
+
+# resource "aws_eip" "one" {
+#   vpc                       = true
+#   network_interface         = aws_network_interface.web-server-nic.id
+#   associate_with_private_ip = "10.0.1.50"
+#   depends_on                = [aws_internet_gateway.gw]
+# }
+
+# output "server_public_ip" {
+#   value = aws_eip.one.public_ip
+# }
+
+# 9. Create Ubuntu server and install/enable apache2
+
+resource "aws_instance" "web-server-instance" {
+  ami               = "ami-0747bdcabd34c712a"
+  instance_type     = "t2.micro"
+  availability_zone = var.availability_zone
+  key_name          = "main-key"
+
+  network_interface {
+    device_index         = 0
+    network_interface_id = aws_network_interface.web-server-nic.id
+  }
+
+  user_data = <<-EOF
+                #!/bin/bash
+                sudo apt update -y
+                sudo apt install apache2 -y
+                sudo systemctl start apache2
+                sudo bash -c 'echo your very first web server > /var/www/html/index.html'
+                EOF
+  tags = {
+    Name = "web-server"
+  }
+}
+
+
+
+output "server_private_ip" {
+  value = aws_instance.web-server-instance.private_ip
+
+}
+
+output "server_id" {
+  value = aws_instance.web-server-instance.id
+}
+
+
+# resource "<provider>_<resource_type>" "name" {
+#     config options.....
+#     key = "value"
+#     key2 = "another value"
+# }
+
+# Create instance
+# resource "aws_instance" "nestjs-backend-api" {
+#   ami           = "ami-0747bdcabd34c712a"
+#   instance_type = "t2.micro"
+#   tags = {
+#     "Name" = "Ubuntu 18.04 LTS"
+#   }
+# }
