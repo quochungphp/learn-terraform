@@ -9,5 +9,9 @@ done
 apt-get update
 apt-get -y install nginx
 
+# install psql client
+apt install postgresql-client-common -y
+apt install postgresql-client -y
+
 # make sure nginx is started
 service nginx start

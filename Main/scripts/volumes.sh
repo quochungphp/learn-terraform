@@ -1,11 +1,12 @@
 #!/bin/bash
 
-set -ex 
-
+set -ex
+# refresh LVM state
 vgchange -ay
 
+# check if no file in system then going to format
 DEVICE_FS=`blkid -o value -s TYPE ${DEVICE} || echo ""`
-if [ "`echo -n $DEVICE_FS`" == "" ] ; then 
+if [ "`echo -n $DEVICE_FS`" == "" ] ; then
   # wait for the device to be attached
   DEVICENAME=`echo "${DEVICE}" | awk -F '/' '{print $3}'`
   DEVICEEXISTS=''
@@ -26,4 +27,4 @@ echo '/dev/data/volume1 /data ext4 defaults 0 0' >> /etc/fstab
 mount /data
 
 # install docker
-curl https://get.docker.com | bash
+# curl https://get.docker.com | bash

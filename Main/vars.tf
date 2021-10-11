@@ -47,5 +47,7 @@ variable "INSTANCE_USERNAME" {
 }
 
 variable "INSTANCE_DEVICE_NAME" {
-  default = "/dev/xvdh"
+  default = "/dev/xvdb"
 }
+
+variable "PG_PASSWORD" {}

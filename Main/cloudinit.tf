@@ -1,5 +1,8 @@
 # This is Userdata
-# Note: it allows you can be used to do any customization at launch, such chas
+# Note: it allows you can be used to do any customization at launch, such as extra software
+# and execute command, scripts and also mount volumes ...etc
+
+# script allows update and install packages
 data "template_file" "init-script" {
   template = file("scripts/init.cfg")
   vars = {
@@ -7,6 +10,7 @@ data "template_file" "init-script" {
   }
 }
 
+# script executes volume configuration
 data "template_file" "shell-script" {
   template = file("scripts/volumes.sh")
   vars = {

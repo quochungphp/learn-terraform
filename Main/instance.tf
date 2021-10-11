@@ -15,6 +15,7 @@ resource "aws_instance" "ec2-backend-api" {
   vpc_security_group_ids = [aws_security_group.allow-ssh.id]
 
   # user data
+  # allows install and config extra components
   user_data = data.template_cloudinit_config.cloudinit-config.rendered
 
   # ssh by provisioner which needs to add current ip into netword security group

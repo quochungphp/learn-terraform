@@ -4,3 +4,5 @@ Main/.terraform
 Main/.terraform/*
 */.terraform/*
 */.terraform
+Main/terraform.tfvars
+main-key.pem

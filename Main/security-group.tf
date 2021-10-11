@@ -20,6 +20,6 @@ resource "aws_security_group" "from_europe" {
   tags = {
     CreateDate = data.aws_ip_ranges.eu_ec2.create_date
     SyncToken  = data.aws_ip_ranges.eu_ec2.sync_token
-    "Name" = "allow-all-traffic-europe"
+    "Name"     = "allow-all-traffic-europe"
   }
 }
